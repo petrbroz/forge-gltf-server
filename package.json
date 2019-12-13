@@ -1,0 +1,24 @@
+{
+  "name": "forge-gltf-server",
+  "version": "0.0.0",
+  "description": "Sample server generating glTF files for Autodesk Forge models.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "autodesk",
+    "forge",
+    "gltf"
+  ],
+  "author": "Petr Broz <petr.broz@autodesk.com>",
+  "license": "MIT",
+  "dependencies": {
+    "cookie-session": "^1.3.3",
+    "express": "^4.17.1",
+    "forge-convert-utils": "^1.2.0",
+    "forge-server-utils": "^8.0.11",
+    "fs-extra": "^8.1.0",
+    "pug": "^2.0.4"
+  }
+}

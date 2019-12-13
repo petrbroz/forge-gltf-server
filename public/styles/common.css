@@ -1,0 +1,32 @@
+@font-face {
+    font-family: 'Artifakt';
+    src: url('/fonts/Artifakt_Element_Regular.woff2') format('woff2');
+}
+
+body {
+    padding-top: 0;
+    padding-bottom: 1em;
+    font-family: Artifakt;
+}
+
+.navbar ol {
+    padding: 0;
+}
+
+.navbar-brand img {
+    height: 30px;
+    margin-right: 0.25em;
+}
+
+#container {
+    padding: 1em;
+}
+
+#tree {
+    width: 100%;
+    overflow: scroll;
+}
+
+#tree .jstree-icon.jstree-themeicon.jstree-themeicon-custom {
+    background-size: 20px !important;
+}
