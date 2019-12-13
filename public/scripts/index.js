@@ -122,16 +122,28 @@ async function updatePreview(urn) {
             `);
             break;
         case 'succeeded':
-            $('#preview').append(status.views.map(view => `
-                <h4>View ${view.name}</h4>
-                <div>
-                    <gltf-viewer interactive src="/tmp/${view.urls.raw}"></gltf-viewer>
-                </div>
-                <ul>
-                    <li>Raw glTF (temporary link): <a href="/tmp/${view.urls.raw}">/tmp/${view.urls.raw}</a></li>
-                    <li>Draco glb (temporary link): <a href="/tmp/${view.urls.glb}">/tmp/${view.urls.glb}</a></li>
+            $('#preview').append(`
+                <ul class="nav nav-tabs" id="views-tabs" role="tablist">
+                    ${status.views.map((view, i) => `
+                        <li class="nav-item">
+                            <a class="nav-link ${i === 0 ? 'active' : ''}" id="tab-${view.id}" data-toggle="tab" role="tab" href="#${view.id}">${view.name}</a>
+                        </li>
+                    `)}
                 </ul>
-            `));
+                <div class="tab-content" id="views-content">
+                    ${status.views.map((view, i) => `
+                        <div class="tab-pane fade ${i === 0 ? 'show active' : ''}" id="${view.id}" role="tabpanel" aria-labelledby="tab-${view.id}">
+                            <div>
+                                <gltf-viewer interactive src="/tmp/${view.urls.raw}"></gltf-viewer>
+                            </div>
+                            <ul>
+                                <li>Raw glTF (temporary link): <a href="/tmp/${view.urls.raw}">/tmp/${view.urls.raw}</a></li>
+                                <li>Draco glb (temporary link): <a href="/tmp/${view.urls.glb}">/tmp/${view.urls.glb}</a></li>
+                            </ul>
+                        <div>
+                    `)}
+                </div>
+            `);
             break;
         case 'failed':
             $('#preview').append(`
