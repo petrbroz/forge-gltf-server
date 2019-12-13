@@ -1,13 +1,12 @@
 async function initUI() {
     initNavbar();
     if (AUTH) {
-        const dataClient = new DataClient(AUTH.access_token);
-        const gltfClient = new GltfClient(AUTH.access_token);
-        initHubsDropdown(dataClient, gltfClient);
+        const bim360Client = new forge.BIM360Client({ token: AUTH.access_token });
+        initHubsDropdown(bim360Client);
     }
 }
 
-async function initNavbar(dataClient, gltfClient) {
+async function initNavbar(bim360Client) {
     const $navbar = $('#navbar-collapsible');
     if (AUTH) {
         $navbar.append(`
@@ -27,32 +26,33 @@ async function initNavbar(dataClient, gltfClient) {
     }
 }
 
-async function initHubsDropdown(dataClient, gltfClient) {
+async function initHubsDropdown(bim360Client) {
     const $hubs = $('#hubs');
-    const hubs = await dataClient.getHubs();
+    const hubs = await bim360Client.listHubs();
     for (const hub of hubs) {
         $hubs.append(`
             <option value="${hub.id}">${hub.name}</option>
         `);
     }
-    $hubs.off('change').on('change', function () { updateProjectsDropdown(dataClient, gltfClient); });
+    $hubs.off('change').on('change', function () { updateProjectsDropdown(bim360Client); });
     $hubs.trigger('change');
 }
 
-async function updateProjectsDropdown(dataClient, gltfClient) {
+async function updateProjectsDropdown(bim360Client) {
+    const hubId = $('#hubs').val();
     const $projects = $('#projects');
     $projects.empty();
-    const projects = await dataClient.getProjects($('#hubs').val());
+    const projects = await bim360Client.listProjects(hubId);
     for (const project of projects) {
         $projects.append(`
             <option value="${project.id}">${project.name}</option>
         `);
     }
-    $projects.off('change').on('change', function () { updateDocumentTree(dataClient, gltfClient); });
+    $projects.off('change').on('change', function () { updateDocumentTree(bim360Client); });
     $projects.trigger('change');
 }
 
-async function updateDocumentTree(dataClient, gltfClient) {
+async function updateDocumentTree(bim360Client) {
     // Icon URLs: https://icongr.am/octicons
     const hubId = $('#hubs').val();
     const projectId = $('#projects').val();
@@ -63,17 +63,18 @@ async function updateDocumentTree(dataClient, gltfClient) {
             const urn = btoa(data.selected[0]);
             // If the base64-encoded string contains '/', we know it's an item version
             if (urn.indexOf('/') !== -1) {
-                updatePreview(urn, gltfClient);
+                updatePreview(urn);
             }
         }
     }).jstree({
         core: {
             data: async function (obj, callback) {
                 if (obj.id === '#') {
-                    const folders = await dataClient.getTopFolders(hubId, projectId);
+                    const folders = await bim360Client.listTopFolders(hubId, projectId);
                     callback(folders.map(folder => {
+                        folder.type = 'folders';
                         return {
-                            text: folder.name,
+                            text: folder.displayName,
                             id: folder.id,
                             children: true,
                             data: folder,
@@ -81,10 +82,10 @@ async function updateDocumentTree(dataClient, gltfClient) {
                         };
                     }));
                 } else if (obj.data.type === 'folders') {
-                    const contents = await dataClient.getFolderContents(hubId, projectId, obj.id);
+                    const contents = await bim360Client.listContents(projectId, obj.id);
                     callback(contents.map(entry => {
                         return {
-                            text: entry.name,
+                            text: entry.displayName,
                             id: entry.id,
                             children: true,
                             data: entry,
@@ -92,10 +93,10 @@ async function updateDocumentTree(dataClient, gltfClient) {
                         };
                     }));
                 } else if (obj.data.type === 'items') {
-                    const versions = await dataClient.getItemVersions(hubId, projectId, obj.id);
+                    const versions = await bim360Client.listVersions(projectId, obj.id);
                     callback(versions.map(version => {
                         return {
-                            text: version.name,
+                            text: version.displayName,
                             id: version.id,
                             children: false,
                             data: version,
@@ -108,9 +109,9 @@ async function updateDocumentTree(dataClient, gltfClient) {
     });
 }
 
-async function updatePreview(urn, gltfClient) {
+async function updatePreview(urn) {
     $('#preview').text('Loading...');
-    const status = await gltfClient.getItemStatus(urn);
+    const status = await getTranslationStatus(urn);
     $('#preview').empty();
     switch (status.status) {
         case 'pending':
@@ -139,6 +140,22 @@ async function updatePreview(urn, gltfClient) {
                 </div>
             `);
             break;
+    }
+}
+
+async function getTranslationStatus(urn) {
+    const options = {
+        headers: {
+            'Authorization': 'Bearer ' + AUTH.access_token
+        }
+    };
+    const resp = await fetch('/api/gltf/' + urn, options);
+    if (resp.ok) {
+        const json = await resp.json();
+        return json;
+    } else {
+        const err = await resp.text();
+        throw new Error(err);
     }
 }
 
