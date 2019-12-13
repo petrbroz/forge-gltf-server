@@ -18,6 +18,10 @@ body {
     margin-right: 0.25em;
 }
 
+#views-tabs {
+    margin-bottom: 0.5em;
+}
+
 #container {
     padding: 1em;
 }

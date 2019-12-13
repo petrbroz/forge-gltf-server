@@ -128,7 +128,7 @@ async function updatePreview(urn) {
                         <li class="nav-item">
                             <a class="nav-link ${i === 0 ? 'active' : ''}" id="tab-${view.id}" data-toggle="tab" role="tab" href="#${view.id}">${view.name}</a>
                         </li>
-                    `)}
+                    `).join('\n')}
                 </ul>
                 <div class="tab-content" id="views-content">
                     ${status.views.map((view, i) => `
@@ -141,7 +141,7 @@ async function updatePreview(urn) {
                                 <li>Draco glb (temporary link): <a href="/tmp/${view.urls.glb}">/tmp/${view.urls.glb}</a></li>
                             </ul>
                         <div>
-                    `)}
+                    `).join('\n')}
                 </div>
             `);
             break;
