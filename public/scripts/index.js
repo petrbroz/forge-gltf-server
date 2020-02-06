@@ -133,13 +133,23 @@ async function updatePreview(version) {
                                 <gltf-viewer interactive src="${view.urls.raw}"></gltf-viewer>
                             </div>
                             <ul>
-                                <li>Raw glTF (temporary link): <a href="${view.urls.raw}">${view.urls.raw}</a></li>
-                                <li>Draco glb (temporary link): <a href="${view.urls.glb}">${view.urls.glb}</a></li>
+                                <li>
+                                    <a href="${view.urls.raw}">Raw glTF (temporary link)</a>
+                                    <div class="qr" data-url="${window.location.href.replace(/\/$/, '') + view.urls.raw}"></div>
+                                </li>
+                                <li>
+                                    <a href="${view.urls.glb}">Draco glb (temporary link)</a>
+                                    <div class="qr" data-url="${window.location.href.replace(/\/$/, '') + view.urls.glb}"></div>
+                                </li>
                             </ul>
                         <div>
                     `).join('\n')}
                 </div>
             `);
+            $('.qr').each(function () {
+                const $this = $(this);
+                $this.qrcode($this.data('url'));
+            });
             break;
         case 'failure':
             $('#preview').append(`
@@ -157,7 +167,7 @@ async function getTranslationStatus(version) {
             'Authorization': 'Bearer ' + AUTH.access_token
         }
     };
-    const resp = await fetch('/api/gltf/' + encodeURIComponent(version), options);
+    const resp = await fetch('/gltf/' + encodeURIComponent(version), options);
     if (resp.ok) {
         const json = await resp.json();
         return json;

@@ -1,6 +1,6 @@
 const express = require('express');
 const { AuthenticationClient } = require('forge-server-utils');
-const config = require('../config');
+const config = require('../config.js');
 
 let authClient = new AuthenticationClient(config.client_id, config.client_secret);
 let router = express.Router();
