@@ -139,8 +139,10 @@ async function updatePreview(version) {
                 </ul>
                 <div class="tab-content" id="views-content">
                     ${status.views.map((view, i) => {
-                        const gltf = window.location.href.replace(/\/$/, '') + view.urls.raw;
-                        const glb = window.location.href.replace(/\/$/, '') + view.urls.glb;
+                        const baseUrl = window.location.href.replace(/\/$/, '') + '/temp/' + view.hash + '/' + view.guid;
+                        const gltf = baseUrl + '/' + view.variants.gltf;
+                        const glb = baseUrl + '/' + view.variants.glb;
+                        const usdz = baseUrl + '/' + view.variants.usdz;
                         return `
                             <div class="tab-pane fade ${i === 0 ? 'show active' : ''}" id="${view.id}" role="tabpanel" aria-labelledby="tab-${view.id}">
                                 <h3>glTF</h3>
@@ -153,6 +155,10 @@ async function updatePreview(version) {
                                     <div class="qr" data-url="${glb}"></div>
                                 </a>
                                 <model-viewer class="model-preview" src="${glb}" alt="glb preview" auto-rotate camera-controls ar></model-viewer>
+                                <h3>USDz</h3>
+                                <a href="${usdz}">
+                                    <div class="qr" data-url="${usdz}"></div>
+                                </a>
                             <div>
                         `;
                     }).join('\n')}

@@ -2,64 +2,45 @@ const crypto = require('crypto');
 const path = require('path');
 const express = require('express');
 const fse = require('fs-extra');
-const { BIM360Client, ModelDerivativeClient, ManifestHelper, urnify } = require('forge-server-utils');
-const { SvfReader, GltfWriter } = require('forge-convert-utils');
+const { BIM360Client } = require('forge-server-utils');
+const svf2gltf = require('../workers/svf-to-gltf.js');
+const gltf2usdz = require('../workers/gltf-to-usdz.js');
 
 let router = express.Router();
 
-async function translate(urn, folderPath, statusPath, token) {
+async function process(urn, folderPath, statusPath, token) {
     try {
-        console.log('Processing', urn);
-        const auth = { token };
-        const modelDerivativeClient = new ModelDerivativeClient(auth);
-        const encodedUrn = urnify(urn).replace('/', '_');
-        const helper = new ManifestHelper(await modelDerivativeClient.getManifest(encodedUrn));
-        const derivatives = helper.search({ type: 'resource', role: 'graphics' });
-        const readerOptions = {
-            log: console.log
-        };
-        const rawWriter = new GltfWriter({
-            skipUnusedUvs: true,
-            ignoreLineGeometry: true,
-            ignorePointGeometry: true,
-            center: true,
-            log: console.log
-        });
-        const glbWriter = new GltfWriter({
-            deduplicate: true,
-            compress: true,
-            binary: true,
-            skipUnusedUvs: true,
-            ignoreLineGeometry: true,
-            ignorePointGeometry: true,
-            center: true,
-            log: console.log
-        });
-        for (const derivative of derivatives.filter(d => d.mime === 'application/autodesk-svf')) {
-            const reader = await SvfReader.FromDerivativeService(encodedUrn, derivative.guid, auth);
-            const svf = await reader.read(readerOptions);
-            await rawWriter.write(svf, path.join(folderPath, derivative.guid, 'raw'));
-            await glbWriter.write(svf, path.join(folderPath, derivative.guid, 'glb'));
-        }
+        console.log('Converting SVF to glTF...');
+        await svf2gltf(urn, folderPath, statusPath, token);
+        console.log('Converting glTF to USDZ...');
         let status = fse.readJsonSync(statusPath);
-        status.status = 'success';
-        status.views = [];
-        for (const derivative of derivatives.filter(d => d.mime === 'application/autodesk-svf')) {
-            status.views.push({
-                name: derivative.name || derivative.guid,
-                guid: derivative.guid,
-                urls: {
-                    raw: path.join('/temp', path.basename(folderPath), derivative.guid, 'raw', 'output.gltf'),
-                    glb: path.join('/temp', path.basename(folderPath), derivative.guid, 'glb', 'output.glb'),
-                }
-            });
+        for (const view of status.views) {
+            const workingDir = path.join(__dirname, '..', 'temp', view.hash, view.guid);
+
+            // The gltf-to-usdz tool fails when gltf contains empty list of images or textures...
+            const gltfPath = path.join(workingDir, 'gltf', 'output.gltf');
+            const manifest = fse.readJsonSync(gltfPath);
+            if (manifest.images.length === 0) {
+                delete manifest.images;
+            }
+            if (manifest.textures.length === 0) {
+                delete manifest.textures;
+            }
+            fse.writeJsonSync(gltfPath, manifest, { spaces: 4 });
+
+            fse.ensureDirSync(path.join(workingDir, 'usdz'));
+            const { stdout, stderr } = await gltf2usdz(workingDir, 'gltf/output.gltf', 'usdz/output.usdz');
+            view.variants.usdz = 'usdz/output.usdz';
+            fse.writeJsonSync(statusPath, status);
+            console.log('stdout', stdout);
+            console.warn('stderr', stderr);
         }
-        fse.writeJsonSync(statusPath, status);
     } catch (err) {
         let status = fse.readJsonSync(statusPath);
         status.status = 'error';
         status.error = err;
-        fse.writeJsonSync(statusPath, status);
+        fse.writeJsonSync(statusPath, status, { spaces: 4 });
+        console.error(err);
     }
 }
 
@@ -82,11 +63,8 @@ router.get('/:urn', async function (req, res) {
         const statusPath = path.join(folderPath, 'status.json');
         fse.ensureDirSync(folderPath);
         if (!fse.pathExistsSync(statusPath)) {
-            fse.writeJsonSync(statusPath, {
-                created: new Date().toISOString(),
-                status: 'inprogress'
-            });
-            translate(urn, folderPath, statusPath, req.access_token);
+            fse.writeJsonSync(statusPath, { created: new Date().toISOString(), status: 'inprogress'}, { spaces: 4 });
+            process(urn, folderPath, statusPath, req.access_token);
             res.status(202).sendFile(statusPath);
         } else {
             res.sendFile(statusPath);
