@@ -18,8 +18,11 @@ body {
     margin-right: 0.25em;
 }
 
-#views-tabs {
-    margin-bottom: 0.5em;
+#views-content {
+    border: 1px solid lightgray;
+    border-radius: 0 0 5px 5px;
+    border-top: none;
+    padding: 1em;
 }
 
 #container {
@@ -29,6 +32,10 @@ body {
 #tree {
     width: 100%;
     overflow: scroll;
+    margin-bottom: 1em;
+    border: 1px solid lightgray;
+    border-radius: 5px;
+    padding: 0.5em;
 }
 
 #tree .jstree-icon.jstree-themeicon.jstree-themeicon-custom {
