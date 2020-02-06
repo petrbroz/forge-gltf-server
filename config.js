@@ -11,11 +11,11 @@ module.exports = {
     client_secret: FORGE_CLIENT_SECRET,
     host_url: HOST_URL,
     session: {
-        name: 'ForgeGltfSession',
+        name: 'ForgeGltfServerSession',
         secret: SERVER_SESSION_SECRET,
         age: 7 * 24 * 60 * 60 * 1000
     },
-    scopes: ['viewables:read', 'bucket:create', 'bucket:read', 'data:read', 'data:create', 'data:write'],
+    scopes: ['viewables:read', 'data:read'],
     redirect_uri: `${HOST_URL}/auth/callback`,
     port: parseInt(process.env.PORT) || 3000
 };

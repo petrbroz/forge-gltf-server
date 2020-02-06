@@ -1,12 +1,16 @@
+$(function () {
+    initUI();
+});
+
 async function initUI() {
     initNavbar();
     if (AUTH) {
         const bim360Client = new forge.BIM360Client({ token: AUTH.access_token });
-        initHubsDropdown(bim360Client);
+        updateHubsDropdown(bim360Client);
     }
 }
 
-async function initNavbar(bim360Client) {
+async function initNavbar() {
     const $navbar = $('#navbar-collapsible');
     if (AUTH) {
         $navbar.append(`
@@ -26,49 +30,36 @@ async function initNavbar(bim360Client) {
     }
 }
 
-async function initHubsDropdown(bim360Client) {
+async function updateHubsDropdown(bim360Client) {
     const $hubs = $('#hubs');
     const hubs = await bim360Client.listHubs();
     for (const hub of hubs) {
-        $hubs.append(`
-            <option value="${hub.id}">${hub.name}</option>
-        `);
+        $hubs.append(`<option value="${hub.id}">${hub.name}</option>`);
     }
-    $hubs.off('change').on('change', function () { updateProjectsDropdown(bim360Client); });
+    $hubs.off('change').on('change', () => updateProjectsDropdown(bim360Client));
     $hubs.trigger('change');
 }
 
 async function updateProjectsDropdown(bim360Client) {
-    const hubId = $('#hubs').val();
     const $projects = $('#projects');
     $projects.empty();
-    const projects = await bim360Client.listProjects(hubId);
+    const projects = await bim360Client.listProjects($('#hubs').val());
     for (const project of projects) {
-        $projects.append(`
-            <option value="${project.id}">${project.name}</option>
-        `);
+        $projects.append(`<option value="${project.id}">${project.name}</option>`);
     }
-    $projects.off('change').on('change', function () { updateDocumentTree(bim360Client); });
+    $projects.off('change').on('change', () => updateDocumentTree(bim360Client));
     $projects.trigger('change');
 }
 
 async function updateDocumentTree(bim360Client) {
     // Icon URLs: https://icongr.am/octicons
-    const hubId = $('#hubs').val();
-    const projectId = $('#projects').val();
     const $tree = $('#tree');
     $tree.jstree('destroy');
-    $tree.on('changed.jstree', async function (e, data) {
-        if (data.selected.length === 1) {
-            const urn = btoa(data.selected[0]);
-            // If the base64-encoded string contains '/', we know it's an item version
-            if (urn.indexOf('/') !== -1) {
-                updatePreview(urn);
-            }
-        }
-    }).jstree({
+    $tree.jstree({
         core: {
             data: async function (obj, callback) {
+                const hubId = $('#hubs').val();
+                const projectId = $('#projects').val();
                 if (obj.id === '#') {
                     const folders = await bim360Client.listTopFolders(hubId, projectId);
                     callback(folders.map(folder => {
@@ -96,7 +87,7 @@ async function updateDocumentTree(bim360Client) {
                     const versions = await bim360Client.listVersions(projectId, obj.id);
                     callback(versions.map(version => {
                         return {
-                            text: version.displayName,
+                            text: version.lastModifiedTime,
                             id: version.id,
                             children: false,
                             data: version,
@@ -106,12 +97,17 @@ async function updateDocumentTree(bim360Client) {
                 }
             }
         }
+    }).on('changed.jstree', async function (ev, data) {
+        const obj = data.node && data.node.data;
+        if (obj && obj.type === 'versions') {
+            updatePreview(obj.id);
+        }
     });
 }
 
-async function updatePreview(urn) {
+async function updatePreview(version) {
     $('#preview').text('Loading...');
-    const status = await getTranslationStatus(urn);
+    const status = await getTranslationStatus(version);
     $('#preview').empty();
     switch (status.status) {
         case 'pending':
@@ -121,7 +117,7 @@ async function updatePreview(urn) {
                 </div>
             `);
             break;
-        case 'succeeded':
+        case 'success':
             $('#preview').append(`
                 <ul class="nav nav-tabs" id="views-tabs" role="tablist">
                     ${status.views.map((view, i) => `
@@ -134,34 +130,34 @@ async function updatePreview(urn) {
                     ${status.views.map((view, i) => `
                         <div class="tab-pane fade ${i === 0 ? 'show active' : ''}" id="${view.id}" role="tabpanel" aria-labelledby="tab-${view.id}">
                             <div>
-                                <gltf-viewer interactive src="/tmp/${view.urls.raw}"></gltf-viewer>
+                                <gltf-viewer interactive src="${view.urls.raw}"></gltf-viewer>
                             </div>
                             <ul>
-                                <li>Raw glTF (temporary link): <a href="/tmp/${view.urls.raw}">/tmp/${view.urls.raw}</a></li>
-                                <li>Draco glb (temporary link): <a href="/tmp/${view.urls.glb}">/tmp/${view.urls.glb}</a></li>
+                                <li>Raw glTF (temporary link): <a href="${view.urls.raw}">${view.urls.raw}</a></li>
+                                <li>Draco glb (temporary link): <a href="${view.urls.glb}">${view.urls.glb}</a></li>
                             </ul>
                         <div>
                     `).join('\n')}
                 </div>
             `);
             break;
-        case 'failed':
+        case 'failure':
             $('#preview').append(`
                 <div class="alert alert-danger" role="alert">
-                    Translation failed: ${status.error}.
+                    Translation failed: ${JSON.stringify(status.error)}.
                 </div>
             `);
             break;
     }
 }
 
-async function getTranslationStatus(urn) {
+async function getTranslationStatus(version) {
     const options = {
         headers: {
             'Authorization': 'Bearer ' + AUTH.access_token
         }
     };
-    const resp = await fetch('/api/gltf/' + urn, options);
+    const resp = await fetch('/api/gltf/' + encodeURIComponent(version), options);
     if (resp.ok) {
         const json = await resp.json();
         return json;
@@ -170,5 +166,3 @@ async function getTranslationStatus(urn) {
         throw new Error(err);
     }
 }
-
-initUI();
