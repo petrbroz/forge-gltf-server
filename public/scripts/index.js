@@ -12,7 +12,7 @@ async function initUI() {
 }
 
 async function initNavbar() {
-    const $navbar = $('#navbar-collapsible');
+    const $navbar = $('.navbar');
     if (AUTH) {
         $navbar.append(`
             <div class="dropdown ml-auto">
