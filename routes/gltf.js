@@ -78,7 +78,7 @@ router.get('/:urn', async function (req, res) {
     try {
         const { urn } = req.params;
         const hash = crypto.createHash('md5').update(urn).update('secret').digest('hex');
-        const folderPath = path.join(__dirname, '..', '..', 'temp', hash);
+        const folderPath = path.join(__dirname, '..', 'temp', hash);
         const statusPath = path.join(folderPath, 'status.json');
         fse.ensureDirSync(folderPath);
         if (!fse.pathExistsSync(statusPath)) {
