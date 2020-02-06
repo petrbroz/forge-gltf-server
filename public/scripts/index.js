@@ -138,28 +138,33 @@ async function updatePreview(version) {
                     `).join('\n')}
                 </ul>
                 <div class="tab-content" id="views-content">
-                    ${status.views.map((view, i) => `
-                        <div class="tab-pane fade ${i === 0 ? 'show active' : ''}" id="${view.id}" role="tabpanel" aria-labelledby="tab-${view.id}">
+                    ${status.views.map((view, i) => {
+                        const gltf = window.location.href.replace(/\/$/, '') + view.urls.raw;
+                        const glb = window.location.href.replace(/\/$/, '') + view.urls.glb;
+                        return `
+                            <div class="tab-pane fade ${i === 0 ? 'show active' : ''}" id="${view.id}" role="tabpanel" aria-labelledby="tab-${view.id}">
+                                <h3>glTF</h3>
+                                <a href="${gltf}">
+                                    <div class="qr" data-url="${gltf}"></div>
+                                </a>
+                                <model-viewer class="model-preview" src="${gltf}" alt="gltf preview" auto-rotate camera-controls ar></model-viewer>
+                                <h3>glb</h3>
+                                <a href="${glb}">
+                                    <div class="qr" data-url="${glb}"></div>
+                                </a>
+                                <model-viewer class="model-preview" src="${glb}" alt="glb preview" auto-rotate camera-controls ar></model-viewer>
                             <div>
-                                <gltf-viewer interactive src="${view.urls.raw}"></gltf-viewer>
-                            </div>
-                            <ul>
-                                <li>
-                                    <a href="${view.urls.raw}">Raw glTF (temporary link)</a>
-                                    <div class="qr" data-url="${window.location.href.replace(/\/$/, '') + view.urls.raw}"></div>
-                                </li>
-                                <li>
-                                    <a href="${view.urls.glb}">Draco glb (temporary link)</a>
-                                    <div class="qr" data-url="${window.location.href.replace(/\/$/, '') + view.urls.glb}"></div>
-                                </li>
-                            </ul>
-                        <div>
-                    `).join('\n')}
+                        `;
+                    }).join('\n')}
                 </div>
             `);
             $('.qr').each(function () {
                 const $this = $(this);
-                $this.qrcode($this.data('url'));
+                $this.qrcode({
+                    width: 256,
+                    height: 256,
+                    text: $this.data('url')
+                });
             });
             break;
         case 'error':

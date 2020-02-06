@@ -34,3 +34,9 @@ body {
 #tree .jstree-icon.jstree-themeicon.jstree-themeicon-custom {
     background-size: 20px !important;
 }
+
+.qr, .model-preview {
+    width: 256px;
+    height: 256px;
+    display: inline-block;
+}
