@@ -57,7 +57,7 @@ async function translate(urn, folderPath, statusPath, token) {
         fse.writeJsonSync(statusPath, status);
     } catch (err) {
         let status = fse.readJsonSync(statusPath);
-        status.status = 'failure';
+        status.status = 'error';
         status.error = err;
         fse.writeJsonSync(statusPath, status);
     }

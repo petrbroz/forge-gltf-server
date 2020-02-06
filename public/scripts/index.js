@@ -6,6 +6,7 @@ async function initUI() {
     initNavbar();
     if (AUTH) {
         const bim360Client = new forge.BIM360Client({ token: AUTH.access_token });
+        $('#container').show();
         updateHubsDropdown(bim360Client);
     }
 }
@@ -106,19 +107,29 @@ async function updateDocumentTree(bim360Client) {
 }
 
 async function updatePreview(version) {
-    $('#preview').text('Loading...');
-    const status = await getTranslationStatus(version);
-    $('#preview').empty();
+    const $preview = $('#preview');
+    $preview.text('Loading...');
+    const resp = await fetch('/convert/' + encodeURIComponent(version), {
+        headers: {
+            'Authorization': 'Bearer ' + AUTH.access_token
+        }
+    });
+    if (!resp.ok) {
+        const err = await resp.text();
+        throw new Error(err);
+    }
+    const status = await resp.json();
+    $preview.empty();
     switch (status.status) {
-        case 'pending':
-            $('#preview').append(`
+        case 'inprogress':
+            $preview.append(`
                 <div class="alert alert-info" role="alert">
                     Translation in progress, please check back later...
                 </div>
             `);
             break;
         case 'success':
-            $('#preview').append(`
+            $preview.append(`
                 <ul class="nav nav-tabs" id="views-tabs" role="tablist">
                     ${status.views.map((view, i) => `
                         <li class="nav-item">
@@ -151,28 +162,12 @@ async function updatePreview(version) {
                 $this.qrcode($this.data('url'));
             });
             break;
-        case 'failure':
-            $('#preview').append(`
+        case 'error':
+            $preview.append(`
                 <div class="alert alert-danger" role="alert">
                     Translation failed: ${JSON.stringify(status.error)}.
                 </div>
             `);
             break;
-    }
-}
-
-async function getTranslationStatus(version) {
-    const options = {
-        headers: {
-            'Authorization': 'Bearer ' + AUTH.access_token
-        }
-    };
-    const resp = await fetch('/gltf/' + encodeURIComponent(version), options);
-    if (resp.ok) {
-        const json = await resp.json();
-        return json;
-    } else {
-        const err = await resp.text();
-        throw new Error(err);
     }
 }
