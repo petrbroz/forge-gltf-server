@@ -19,6 +19,6 @@
     "forge-convert-utils": "^1.2.0",
     "forge-server-utils": "^8.0.11",
     "fs-extra": "^8.1.0",
-    "pug": "^2.0.4"
+    "pug": "^3.0.1"
   }
 }
